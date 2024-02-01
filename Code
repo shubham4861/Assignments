@@ -1,0 +1,44 @@
+from flask import Flask, jsonify
+import requests
+from bs4 import BeautifulSoup
+
+app = Flask(__name__)
+
+# Function to make an HTTP GET request to fetch webpage content
+def fetch_webpage(url):
+    response = requests.get(url)
+    return response.text
+
+# Function to extract the top 6 stories from a given HTML
+def extract_stories(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    stories = soup.find_all('div', class_='story')[:6]
+
+    result = []
+    for story in stories:
+        heading = story.find('h3').text.strip() if story.find('h3') else 'Heading not found'
+        url = story.find('a')['href'].strip() if story.find('a') else 'URL not found'
+        result.append({'heading': heading, 'url': url})
+
+    return result
+
+# Route to fetch and return the top 6 stories
+@app.route('/top_stories', methods=['GET'])
+def get_top_stories():
+    url = 'https://time.com'
+
+    try:
+        html = fetch_webpage(url)
+        stories = extract_stories(html)
+
+        if stories:
+            return jsonify(stories)
+        else:
+            return 'Top stories not found', 404
+
+    except Exception as e:
+        print(f'Error fetching or parsing content: {e}')
+        return 'Error fetching or parsing content', 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
